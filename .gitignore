@@ -51,3 +51,7 @@ samples/dynamic/
 samples/custom/
 backend/static/masks/
 backend/static/previews/
+
+# Binaries and local tools
+tools/
+*.exe

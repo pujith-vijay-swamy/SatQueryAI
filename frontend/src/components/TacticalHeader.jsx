@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Cpu, Activity, Satellite, Radio, Shield, Globe, MessageSquare,
-  Server, Upload, CheckCircle2, AlertCircle, Loader2, X, ExternalLink
+  Cpu, Satellite, Radio, Shield, Globe, MessageSquare,
+  Server, CheckCircle2, AlertCircle, Loader2, X, ExternalLink
 } from 'lucide-react';
 
 export default function TacticalHeader({
@@ -15,17 +15,11 @@ export default function TacticalHeader({
   geochatUrl = '',
   onUpdateGeochatUrl
 }) {
-  const [utc, setUtc] = useState('');
   const [isGeochatModalOpen, setIsGeochatModalOpen] = useState(false);
   const [inputUrl, setInputUrl] = useState(geochatUrl);
   const [isChecking, setIsChecking] = useState(false);
   const [geochatStatusMsg, setGeochatStatusMsg] = useState(null);
   const [isOnline, setIsOnline] = useState(Boolean(geochatUrl));
-
-  useEffect(() => {
-    const t = () => setUtc(new Date().toISOString().replace('T', ' · ').slice(0, 22) + ' UTC');
-    t(); const id = setInterval(t, 1000); return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     setInputUrl(geochatUrl);
@@ -161,16 +155,6 @@ export default function TacticalHeader({
               </span>
             </div>
           )}
-
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '4px 9px', borderRadius: 5,
-            background: '#09090b', border: '1px solid #27272a',
-            fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#71717a',
-          }}>
-            <Activity size={11} color="#3b82f6" />
-            <span>{utc}</span>
-          </div>
 
           {/* Toggle Chat & Analysis Console Button */}
           <button
