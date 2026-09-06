@@ -26,11 +26,12 @@ export default function ChatWorkbench({
   const scrollRef = useRef(null);
 
   // Inline Quick Upload State
-  const [showUploader, setShowUploader] = useState(false);
   const [file1, setFile1] = useState(null);
   const [file2, setFile2] = useState(null);
   const [file1Preview, setFile1Preview] = useState(null);
   const [file2Preview, setFile2Preview] = useState(null);
+  const [isDragOver1, setIsDragOver1] = useState(false);
+  const [isDragOver2, setIsDragOver2] = useState(false);
   const [isSubmittingUpload, setIsSubmittingUpload] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState(null);
 
@@ -103,9 +104,59 @@ export default function ChatWorkbench({
     }
   };
 
+  const handleDrop1 = (e) => {
+    e.preventDefault();
+    setIsDragOver1(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      setFile1(f);
+      setUploadFeedback(null);
+      if (f.type.startsWith('image/')) {
+        setFile1Preview(URL.createObjectURL(f));
+      } else {
+        setFile1Preview(null);
+      }
+    }
+  };
+
+  const handleDrop2 = (e) => {
+    e.preventDefault();
+    setIsDragOver2(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      setFile2(f);
+      setUploadFeedback(null);
+      if (f.type.startsWith('image/')) {
+        setFile2Preview(URL.createObjectURL(f));
+      } else {
+        setFile2Preview(null);
+      }
+    }
+  };
+
+  const handleClear1 = (e) => {
+    if (e) e.stopPropagation();
+    setFile1(null);
+    setFile1Preview(null);
+  };
+
+  const handleClear2 = (e) => {
+    if (e) e.stopPropagation();
+    setFile2(null);
+    setFile2Preview(null);
+  };
+
+  const handleClearAll = () => {
+    setFile1(null);
+    setFile2(null);
+    setFile1Preview(null);
+    setFile2Preview(null);
+    setUploadFeedback(null);
+  };
+
   const handleExecuteUpload = async () => {
     if (!file1) {
-      setUploadFeedback('Please select at least 1 image to analyze.');
+      setUploadFeedback('Please select or drop at least 1 primary image to analyze.');
       return;
     }
 
@@ -134,7 +185,6 @@ export default function ChatWorkbench({
         if (onCustomUploadSuccess) {
           onCustomUploadSuccess(data);
         }
-        setShowUploader(false);
         setFile1(null);
         setFile2(null);
         setFile1Preview(null);
@@ -251,253 +301,223 @@ export default function ChatWorkbench({
         flex: 1, overflowY: 'auto', padding: '14px 16px',
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
-        {/* ── Smart Raster Ingestion & Intelligence Card ── */}
+        {/* ── Integrated Multi-Modal Raster Ingestion & Analysis Workspace ── */}
         <div style={{
           borderRadius: 8, overflow: 'hidden',
-          border: '1px solid #27272a', background: 'rgba(18, 18, 22, 0.95)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          border: '1px solid #27272a', background: 'rgba(15, 15, 20, 0.98)',
+          boxShadow: '0 6px 24px rgba(0,0,0,0.4)',
         }}>
-          {/* Card Action Header */}
+          {/* Workspace Title & Actions Header */}
           <div style={{
-            padding: '8px 12px', background: 'rgba(25, 25, 30, 0.98)',
+            padding: '8px 12px', background: 'rgba(22, 22, 28, 0.98)',
             borderBottom: '1px solid #27272a',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#fafafa' }}>
-              {single ? <BrainCircuit size={13} color="#00F0FF" /> : <Layers size={13} color="#22c55e" />}
-              <span>{single ? 'Remote Sensing VQA Model (GeoChat)' : 'Bitemporal Change Detection (BiT-CD)'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 700, color: '#fafafa' }}>
+              <Upload size={13} color="#00F0FF" />
+              <span>RASTER INGESTION WORKSPACE</span>
+              <span style={{ fontSize: 9, color: '#71717a', fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}>
+                (.TIF · .PNG · .JPG)
+              </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {(file1 || file2) && (
+                <button
+                  onClick={handleClearAll}
+                  title="Clear Selected Uploads"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '3px 7px', borderRadius: 4,
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444', fontSize: 10, fontWeight: 600,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={10} />
+                  <span>RESET</span>
+                </button>
+              )}
+
               <button
-                onClick={() => setShowUploader(prev => !prev)}
-                title="Upload 1 Image (VQA) or 2 Images (BiT-CD)"
+                onClick={onOpenModal}
+                title="Open in High-Resolution 1:1 Inspection Modal"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 9px', borderRadius: 4,
-                  background: showUploader ? 'rgba(0, 240, 255, 0.2)' : 'rgba(0, 240, 255, 0.08)',
-                  border: '1px solid rgba(0, 240, 255, 0.35)',
-                  color: '#00F0FF', fontSize: 10, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '3px 8px', borderRadius: 4,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid #3f3f46',
+                  color: '#fafafa', fontSize: 10, fontWeight: 600,
                   fontFamily: "'JetBrains Mono', monospace",
                   cursor: 'pointer', transition: 'all 0.15s ease',
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#22c55e'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#3f3f46'; }}
               >
-                <Upload size={11} />
-                <span>{showUploader ? 'CANCEL' : 'UPLOAD RASTERS'}</span>
+                <Maximize2 size={10} />
+                <span>INSPECT 1:1</span>
               </button>
-
-              {!showUploader && (
-                <button
-                  onClick={onOpenModal}
-                  title="Open in High-Resolution Inspection Workspace"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '4px 9px', borderRadius: 4,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid #3f3f46',
-                    color: '#fafafa', fontSize: 10, fontWeight: 600,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    cursor: 'pointer', transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#22c55e'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#3f3f46'; }}
-                >
-                  <Maximize2 size={11} />
-                  <span>INSPECT 1:1</span>
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Inline Uploader Workspace */}
-          {showUploader ? (
-            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, background: '#09090c' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#fafafa', letterSpacing: '0.02em' }}>
-                  INGEST SATELLITE RASTERS (.TIF / .PNG / .JPG)
-                </span>
-                <span style={{ fontSize: 10, color: '#71717a', fontFamily: "'JetBrains Mono', monospace" }}>
-                  1 Image → VQA | 2 Images → BiT-CD
-                </span>
-              </div>
-
-              {uploadFeedback && (
-                <div style={{
-                  padding: '6px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', fontSize: 11,
-                }}>
-                  {uploadFeedback}
-                </div>
-              )}
-
-              {/* Dual Slots */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {/* Image 1 Slot */}
-                <label style={{
-                  border: '1px dashed #3f3f46', borderRadius: 6, padding: 10,
-                  background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: 90,
-                  textAlign: 'center', position: 'relative',
-                }}>
-                  <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile1Select} style={{ display: 'none' }} />
-                  {file1Preview ? (
-                    <img src={file1Preview} alt="Image 1" style={{ width: '100%', height: 80, objectFit: 'contain' }} />
-                  ) : file1 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle2 size={18} color="#22c55e" />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#fafafa' }}>{file1.name}</span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#71717a' }}>
-                      <FileUp size={18} color="#00F0FF" />
-                      <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 600 }}>1. Primary Raster</span>
-                      <span style={{ fontSize: 9 }}>Required (GeoTIFF / PNG)</span>
-                    </div>
-                  )}
-                </label>
-
-                {/* Image 2 Slot */}
-                <label style={{
-                  border: '1px dashed #3f3f46', borderRadius: 6, padding: 10,
-                  background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: 90,
-                  textAlign: 'center', position: 'relative',
-                }}>
-                  <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile2Select} style={{ display: 'none' }} />
-                  {file2Preview ? (
-                    <img src={file2Preview} alt="Image 2" style={{ width: '100%', height: 80, objectFit: 'contain' }} />
-                  ) : file2 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle2 size={18} color="#38bdf8" />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#fafafa' }}>{file2.name}</span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#71717a' }}>
-                      <Plus size={18} color="#38bdf8" />
-                      <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 600 }}>2. Observation Raster</span>
-                      <span style={{ fontSize: 9 }}>Optional (Enables BiT-CD)</span>
-                    </div>
-                  )}
-                </label>
-              </div>
-
-              {/* Mode Intelligence Badge */}
+          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {uploadFeedback && (
               <div style={{
-                padding: '6px 10px', borderRadius: 4,
-                background: file2 ? 'rgba(34,197,94,0.08)' : 'rgba(0,240,255,0.08)',
-                border: `1px solid ${file2 ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+                padding: '6px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', fontSize: 11,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {file2 ? <Zap size={12} color="#22c55e" /> : <BrainCircuit size={12} color="#00F0FF" />}
-                  <span style={{ color: file2 ? '#22c55e' : '#00F0FF', fontWeight: 700 }}>
-                    TARGET AGENT: {file2 ? 'BIT-CD BITEMPORAL TRANSFORMER' : 'GEOCHAT RS-VQA & GROUNDING'}
-                  </span>
-                </div>
-                <span style={{ color: '#71717a' }}>
-                  {file2 ? '2 Files Selected' : (file1 ? '1 File Selected' : '0 Files')}
-                </span>
+                {uploadFeedback}
+              </div>
+            )}
+
+            {/* Dual Ingestion Dropzones */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {/* Dropzone 1 (T1 / Primary) */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver1(true); }}
+                onDragLeave={() => setIsDragOver1(false)}
+                onDrop={handleDrop1}
+                style={{
+                  border: `1px ${file1 ? 'solid #00F0FF' : isDragOver1 ? 'dashed #00F0FF' : 'dashed #3f3f46'}`,
+                  borderRadius: 6, padding: file1 ? 6 : 10,
+                  background: isDragOver1 ? 'rgba(0, 240, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', minHeight: 96,
+                  textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
+                }}
+              >
+                {file1 ? (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                    {file1Preview ? (
+                      <img src={file1Preview} alt="T1 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
+                    ) : (
+                      <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <CheckCircle2 size={20} color="#00F0FF" />
+                        <span style={{ fontSize: 11, color: '#00F0FF', fontWeight: 600 }}>GeoTIFF Ready</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                        {file1.name}
+                      </span>
+                      <button
+                        onClick={handleClear1}
+                        title="Remove file"
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
+                    <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile1Select} style={{ display: 'none' }} />
+                    <FileUp size={20} color="#00F0FF" />
+                    <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>1. Primary Raster (T1)</span>
+                    <span style={{ fontSize: 9, color: '#71717a' }}>Drop or click to upload</span>
+                  </label>
+                )}
               </div>
 
-              {/* Ingest Action Button */}
+              {/* Dropzone 2 (T2 / Observation) */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver2(true); }}
+                onDragLeave={() => setIsDragOver2(false)}
+                onDrop={handleDrop2}
+                style={{
+                  border: `1px ${file2 ? 'solid #38bdf8' : isDragOver2 ? 'dashed #38bdf8' : 'dashed #3f3f46'}`,
+                  borderRadius: 6, padding: file2 ? 6 : 10,
+                  background: isDragOver2 ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255,255,255,0.02)',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', minHeight: 96,
+                  textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
+                }}
+              >
+                {file2 ? (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                    {file2Preview ? (
+                      <img src={file2Preview} alt="T2 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
+                    ) : (
+                      <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <CheckCircle2 size={20} color="#38bdf8" />
+                        <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>GeoTIFF Ready</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                        {file2.name}
+                      </span>
+                      <button
+                        onClick={handleClear2}
+                        title="Remove file"
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
+                    <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile2Select} style={{ display: 'none' }} />
+                    <Plus size={20} color="#38bdf8" />
+                    <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>2. Observation Raster (T2)</span>
+                    <span style={{ fontSize: 9, color: '#71717a' }}>Optional for BiT-CD</span>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Live Model Intelligence & Routing Indicator */}
+            <div style={{
+              padding: '7px 10px', borderRadius: 5,
+              background: (file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.08)' : 'rgba(0,240,255,0.08)',
+              border: `1px solid ${(file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {(file2 || (!file1 && !single)) ? <Zap size={12} color="#22c55e" /> : <BrainCircuit size={12} color="#00F0FF" />}
+                <span style={{ color: (file2 || (!file1 && !single)) ? '#22c55e' : '#00F0FF', fontWeight: 700 }}>
+                  ROUTING: {(file2 || (!file1 && !single)) ? 'BIT-CD BITEMPORAL TRANSFORMER (94.7% ACC)' : 'GEOCHAT RS-VQA & GROUNDING'}
+                </span>
+              </div>
+              <span style={{ color: '#a1a1aa' }}>
+                {file2 ? '2 Uploads' : (file1 ? '1 Upload (VQA)' : (single ? '1 Active Scene' : '2 Active Scenes'))}
+              </span>
+            </div>
+
+            {/* Ingest Action Button (when files selected) */}
+            {file1 && (
               <button
                 onClick={handleExecuteUpload}
-                disabled={isSubmittingUpload || !file1}
+                disabled={isSubmittingUpload}
                 style={{
                   height: 36, borderRadius: 5,
                   background: isSubmittingUpload ? '#27272a' : (file2 ? '#22c55e' : '#00F0FF'),
                   border: 'none', color: '#09090b', fontSize: 11, fontWeight: 700,
                   fontFamily: "'JetBrains Mono', monospace",
-                  cursor: (isSubmittingUpload || !file1) ? 'not-allowed' : 'pointer',
+                  cursor: isSubmittingUpload ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  boxShadow: `0 0 16px ${file2 ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
                   transition: 'all 0.15s ease',
                 }}
               >
                 {isSubmittingUpload ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
-                    <span>INGESTING & ROUTING TO SPECIALIST MODEL...</span>
+                    <span>INGESTING & RUNNING SPECIALIST MODEL...</span>
                   </>
                 ) : (
                   <>
-                    <span>INGEST & DISPATCH TO {file2 ? 'BIT-CD MODEL' : 'VQA MODEL'}</span>
+                    <span>INGEST & DISPATCH TO {file2 ? 'BIT-CD MODEL' : 'GEOCHAT MODEL'}</span>
                     <ArrowRight size={13} />
                   </>
                 )}
               </button>
-            </div>
-          ) : (
-            /* Active Raster Thumbnails View */
-            <div
-              onClick={onOpenModal}
-              style={{
-                display: single ? 'block' : 'grid',
-                gridTemplateColumns: single ? 'none' : '1fr 1fr',
-                height: 110, cursor: 'pointer', position: 'relative', overflow: 'hidden',
-              }}
-              title="Click for 1:1 Resolution Modal"
-            >
-              {single ? (
-                /* Single Image Preview for VQA */
-                <div style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden', background: '#09090c' }}>
-                  <img src={leftImg} alt="VQA Observation" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  <div style={{
-                    position: 'absolute', bottom: 6, left: 8,
-                    padding: '2px 8px', borderRadius: 3, background: 'rgba(9,9,11,0.85)',
-                    fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#00F0FF',
-                    border: '1px solid rgba(0,240,255,0.3)',
-                  }}>
-                    Single Scene · {gsd} · {crs}
-                  </div>
-                </div>
-              ) : (
-                /* Dual Image Comparison Preview for BiT-CD */
-                <>
-                  <div style={{ position: 'relative', height: '100%', overflow: 'hidden', borderRight: '1px solid #27272a' }}>
-                    <img src={leftImg} alt="T1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{
-                      position: 'absolute', bottom: 4, left: 6,
-                      padding: '2px 6px', borderRadius: 3, background: 'rgba(9,9,11,0.85)',
-                      fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#22c55e',
-                    }}>
-                      T1: {t1Date}
-                    </div>
-                  </div>
-
-                  <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
-                    <img src={rightImg} alt="T2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{
-                      position: 'absolute', bottom: 4, right: 6,
-                      padding: '2px 6px', borderRadius: 3, background: 'rgba(9,9,11,0.85)',
-                      fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#38bdf8',
-                    }}>
-                      T2: {t2Date}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Hover hint */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'rgba(0,0,0,0.25)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: 0, transition: 'opacity 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
-              >
-                <span style={{
-                  padding: '4px 10px', borderRadius: 4, background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid #00F0FF', color: '#00F0FF', fontSize: 10,
-                  fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
-                }}>
-                  CLICK FOR 1:1 RESOLUTION POPUP
-                </span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Loading Indicator Card */}

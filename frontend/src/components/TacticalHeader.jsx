@@ -104,26 +104,6 @@ export default function TacticalHeader({
               </span>
             </div>
           </div>
-
-          <div style={{ height: 22, width: 1, background: '#27272a' }} />
-
-          {/* Quick Action: Upload Rasters */}
-          <button
-            onClick={onOpenUploadModal}
-            title="Upload Custom TIFF / GeoTIFF / PNG / JPEG Rasters"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '4px 11px', borderRadius: 4,
-              background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.35)',
-              color: '#00F0FF', fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,240,255,0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,240,255,0.1)'; }}
-          >
-            <Upload size={12} />
-            <span>UPLOAD RASTERS</span>
-          </button>
         </div>
 
         {/* Center: Target Telemetry & Sensor Breadcrumb */}
