@@ -32,7 +32,9 @@ export default function TacticalHeader({
     setIsOnline(Boolean(geochatUrl));
   }, [geochatUrl]);
 
-  const sensorName = activeScene?.sensor || (activeScene?.mode === 'cross_modal' ? 'RISAT-1 SAR + Optical' : 'Sentinel-2 MSI (10m)');
+  const targetLocation = activeScene?.location?.split(',')[0]?.trim() || activeScene?.title || (isChatOpen ? 'Active Analysis Swath' : 'GLOBAL ORBIT');
+  const targetCrs = activeScene?.crs || (isChatOpen ? 'EPSG:32643' : 'WGS-84');
+  const sensorName = activeScene?.sensor || (activeScene ? (activeScene.mode === 'cross_modal' ? 'RISAT-1 SAR + Optical' : 'Sentinel-2 MSI (10m)') : 'MULTI-MISSION CONSTELLATION');
 
   const handleSaveGeochat = async () => {
     setIsChecking(true);
@@ -113,13 +115,13 @@ export default function TacticalHeader({
           background: 'rgba(24, 24, 27, 0.7)', border: '1px solid #27272a',
           fontSize: 11, fontFamily: "'JetBrains Mono', monospace",
         }}>
-          <Radio size={12} color="#3b82f6" className="animate-pulse" />
+          <Radio size={12} color={activeScene ? "#3b82f6" : "#22c55e"} className="animate-pulse" />
           <span style={{ color: '#71717a' }}>TARGET:</span>
           <span style={{ color: '#fafafa', fontWeight: 600 }}>
-            {activeScene?.location?.split(',')[0]?.trim() || 'Global Orbit'}
+            {targetLocation}
           </span>
           <span style={{ color: '#3f3f46' }}>|</span>
-          <span style={{ color: '#38bdf8' }}>{activeScene?.crs || 'EPSG:32643'}</span>
+          <span style={{ color: '#38bdf8' }}>{targetCrs}</span>
           <span style={{ color: '#3f3f46' }}>|</span>
           <span style={{ color: '#a1a1aa', fontSize: 10 }}>{sensorName}</span>
         </div>

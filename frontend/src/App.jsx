@@ -63,8 +63,6 @@ export default function App() {
         if (sRes.ok) {
           const d = await sRes.json();
           setScenes(d.scenes || {});
-          const def = d.scenes?.ahmedabad_bitemporal;
-          setActiveScene(def || Object.values(d.scenes)[0] || null);
         }
         if (hRes.ok) {
           const hd = await hRes.json();

@@ -759,7 +759,7 @@ export default function GlobeViewer({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                 <span style={{ color: '#71717a' }}>CRS / GSD</span>
-                <span style={{ color: '#a1a1aa' }}>{activeScene?.crs || 'EPSG:32643'} · {activeScene?.gsd || '0.65m'}</span>
+                <span style={{ color: '#a1a1aa' }}>{activeScene ? `${activeScene.crs || 'EPSG:32643'} · ${activeScene.gsd || '0.65m'}` : 'WGS-84 · 3D GLOBE'}</span>
               </div>
 
               {/* Safety Layer Active Indicator */}
