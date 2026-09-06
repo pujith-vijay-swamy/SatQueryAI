@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-2: #1e1e22;
+  --border: #27272a;
+  --border-dim: #1c1c1f;
+  --text: #fafafa;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --text-4: #52525b;
+  --green: #22c55e;
+  --green-dim: #16a34a;
+  --blue: #3b82f6;
+  --amber: #f59e0b;
+  --red: #ef4444;
+}
+
+html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(34, 197, 94, 0.3);
+  color: #fafafa;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #333; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+
+/* ── MapLibre GL 3D Globe Styling ── */
+.maplibregl-canvas {
+  outline: none !important;
+  background: transparent !important;
+}
+
+.maplibregl-map {
+  background: transparent !important;
+}
+
+.maplibregl-ctrl-attrib {
+  display: none !important;
+}
+
+.maplibregl-ctrl-group {
+  background: #18181b !important;
+  border: 1px solid #27272a !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 32px !important;
+  height: 32px !important;
+  border-bottom: 1px solid #27272a !important;
+  background-color: transparent !important;
+}
+
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.85);
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: #27272a !important;
+}
+
+/* Pulsing radar target beacon */
+@keyframes beacon-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.target-beacon-pulse {
+  animation: beacon-pulse 2s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+
+/* MapLibre Popup Dark Theme */
+.maplibregl-popup-content {
+  background: #18181b !important;
+  border: 1px solid #27272a !important;
+  color: #fafafa !important;
+  border-radius: 0 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7) !important;
+  padding: 8px 12px !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #71717a !important;
+  padding: 4px 6px !important;
+  font-size: 14px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #fafafa !important;
+  background-color: transparent !important;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: #18181b !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: #18181b !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: #18181b !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: #18181b !important;
+}

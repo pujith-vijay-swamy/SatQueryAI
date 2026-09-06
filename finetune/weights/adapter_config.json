@@ -1,0 +1,15 @@
+{
+  "base_model_name_or_path": "microsoft/Florence-2-base",
+  "bias": "none",
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "peft_type": "LORA",
+  "r": 16,
+  "target_modules": [
+    "q_proj",
+    "v_proj"
+  ],
+  "task_type": "CAUSAL_LM",
+  "dataset_trained": "BigEarthNet-1K-RSVQA",
+  "finetune_timestamp": "2026-09-04T22:50:00Z"
+}

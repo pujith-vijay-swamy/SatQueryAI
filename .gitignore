@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Build artifacts
+dist/
+*/dist/
+build/
+*/build/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Scratch & Temporary test scripts
+test_fly_debug.js
+test_zoom.js
+scratch/
+.tempmediaStorage/\n
+# Dynamic sample outputs and previews
+samples/dynamic/
+backend/static/masks/
+backend/static/previews/

@@ -1,0 +1,50 @@
+S2A_MSIL2A_2024_00000	Hydrological VQA	Locate water bodies and calculate inundation level.	Water courses, Coniferous forest
+S2A_MSIL2A_2024_00001	Hydrological VQA	Locate water bodies and calculate inundation level.	Complex cultivation patterns, Airports, Port areas
+S2A_MSIL2A_2024_00002	Hydrological VQA	Locate water bodies and calculate inundation level.	Road and rail networks, Broad-leaved forest, Non-irrigated arable land
+S2A_MSIL2A_2024_00003	Multi-label classification	What land cover classes are present in this satellite scene?	Mixed forest, Port areas, Discontinuous urban fabric, Water courses
+S2A_MSIL2A_2024_00004	Hydrological VQA	Locate water bodies and calculate inundation level.	Inland marshes, Complex cultivation patterns, Industrial or commercial units, Coniferous forest
+S2A_MSIL2A_2024_00005	Change Grounding	Detect commercial and industrial expansion zones.	Inland marshes, Road and rail networks, Non-irrigated arable land, Pastures
+S2A_MSIL2A_2024_00006	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Permanently irrigated land, Non-irrigated arable land
+S2A_MSIL2A_2024_00007	Hydrological VQA	Locate water bodies and calculate inundation level.	Continuous urban fabric, Road and rail networks, Coniferous forest, Mixed forest
+S2A_MSIL2A_2024_00008	Hydrological VQA	Locate water bodies and calculate inundation level.	Water bodies, Coastal lagoons, Industrial or commercial units
+S2A_MSIL2A_2024_00009	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Non-irrigated arable land, Coastal lagoons, Coniferous forest
+S2A_MSIL2A_2024_00010	Hydrological VQA	Locate water bodies and calculate inundation level.	Industrial or commercial units, Water bodies, Estuaries
+S2A_MSIL2A_2024_00011	Hydrological VQA	Locate water bodies and calculate inundation level.	Pastures, Water courses, Inland marshes, Industrial or commercial units
+S2A_MSIL2A_2024_00012	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Industrial or commercial units, Estuaries, Mixed forest, Pastures
+S2A_MSIL2A_2024_00013	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Non-irrigated arable land, Estuaries, Continuous urban fabric
+S2A_MSIL2A_2024_00014	Change Grounding	Detect commercial and industrial expansion zones.	Coniferous forest, Road and rail networks, Continuous urban fabric
+S2A_MSIL2A_2024_00015	Multi-label classification	What land cover classes are present in this satellite scene?	Port areas, Mixed forest
+S2A_MSIL2A_2024_00016	Hydrological VQA	Locate water bodies and calculate inundation level.	Mixed forest, Estuaries
+S2A_MSIL2A_2024_00017	Hydrological VQA	Locate water bodies and calculate inundation level.	Mixed forest, Inland marshes, Complex cultivation patterns
+S2A_MSIL2A_2024_00018	Hydrological VQA	Locate water bodies and calculate inundation level.	Broad-leaved forest, Water courses
+S2A_MSIL2A_2024_00019	Change Grounding	Detect commercial and industrial expansion zones.	Estuaries, Complex cultivation patterns, Pastures
+S2A_MSIL2A_2024_00020	Change Grounding	Detect commercial and industrial expansion zones.	Port areas, Water courses
+S2A_MSIL2A_2024_00021	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Airports, Permanently irrigated land, Road and rail networks
+S2A_MSIL2A_2024_00022	Hydrological VQA	Locate water bodies and calculate inundation level.	Broad-leaved forest, Permanently irrigated land, Estuaries
+S2A_MSIL2A_2024_00023	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Mixed forest, Water courses, Coastal lagoons
+S2A_MSIL2A_2024_00024	Multi-label classification	What land cover classes are present in this satellite scene?	Mixed forest, Inland marshes, Complex cultivation patterns, Pastures
+S2A_MSIL2A_2024_00025	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Pastures, Water courses
+S2A_MSIL2A_2024_00026	Multi-label classification	What land cover classes are present in this satellite scene?	Port areas, Airports, Coastal lagoons, Pastures
+S2A_MSIL2A_2024_00027	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Water bodies, Non-irrigated arable land
+S2A_MSIL2A_2024_00028	Change Grounding	Detect commercial and industrial expansion zones.	Continuous urban fabric, Inland marshes
+S2A_MSIL2A_2024_00029	Multi-label classification	What land cover classes are present in this satellite scene?	Coastal lagoons, Discontinuous urban fabric, Continuous urban fabric, Complex cultivation patterns
+S2A_MSIL2A_2024_00030	Multi-label classification	What land cover classes are present in this satellite scene?	Permanently irrigated land, Coastal lagoons
+S2A_MSIL2A_2024_00031	Multi-label classification	What land cover classes are present in this satellite scene?	Complex cultivation patterns, Permanently irrigated land, Water bodies
+S2A_MSIL2A_2024_00032	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Estuaries, Broad-leaved forest, Industrial or commercial units
+S2A_MSIL2A_2024_00033	Change Grounding	Detect commercial and industrial expansion zones.	Coniferous forest, Complex cultivation patterns
+S2A_MSIL2A_2024_00034	Hydrological VQA	Locate water bodies and calculate inundation level.	Pastures, Discontinuous urban fabric
+S2A_MSIL2A_2024_00035	Hydrological VQA	Locate water bodies and calculate inundation level.	Inland marshes, Coastal lagoons
+S2A_MSIL2A_2024_00036	Change Grounding	Detect commercial and industrial expansion zones.	Discontinuous urban fabric, Mixed forest, Industrial or commercial units, Continuous urban fabric
+S2A_MSIL2A_2024_00037	Change Grounding	Detect commercial and industrial expansion zones.	Road and rail networks, Industrial or commercial units
+S2A_MSIL2A_2024_00038	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Airports, Coastal lagoons, Inland marshes, Mixed forest
+S2A_MSIL2A_2024_00039	Change Grounding	Detect commercial and industrial expansion zones.	Broad-leaved forest, Road and rail networks, Port areas, Continuous urban fabric
+S2A_MSIL2A_2024_00040	Hydrological VQA	Locate water bodies and calculate inundation level.	Water bodies, Coniferous forest, Pastures, Inland marshes
+S2A_MSIL2A_2024_00041	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Water courses, Water bodies
+S2A_MSIL2A_2024_00042	Change Grounding	Detect commercial and industrial expansion zones.	Permanently irrigated land, Port areas, Complex cultivation patterns, Discontinuous urban fabric
+S2A_MSIL2A_2024_00043	Hydrological VQA	Locate water bodies and calculate inundation level.	Industrial or commercial units, Water courses, Inland marshes
+S2A_MSIL2A_2024_00044	Multi-label classification	What land cover classes are present in this satellite scene?	Non-irrigated arable land, Industrial or commercial units, Airports, Complex cultivation patterns
+S2A_MSIL2A_2024_00045	Hydrological VQA	Locate water bodies and calculate inundation level.	Water bodies, Pastures
+S2A_MSIL2A_2024_00046	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Broad-leaved forest, Road and rail networks
+S2A_MSIL2A_2024_00047	Change Grounding	Detect commercial and industrial expansion zones.	Coniferous forest, Road and rail networks, Broad-leaved forest
+S2A_MSIL2A_2024_00048	Infrastructure VQA	Identify built-up infrastructure and transport corridors.	Pastures, Water bodies, Industrial or commercial units, Water courses
+S2A_MSIL2A_2024_00049	Hydrological VQA	Locate water bodies and calculate inundation level.	Coniferous forest, Water courses, Non-irrigated arable land
