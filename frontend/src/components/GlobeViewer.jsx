@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Crosshair, Globe, Map, Compass, RotateCcw, Eye, EyeOff, Search, X, MapPin, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { Crosshair, Globe, Map, Compass, RotateCcw, Eye, EyeOff, Search, X, MapPin, Shield, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Starfield from './Starfield';
 import AtmosphereOverlay from './AtmosphereOverlay';
 
@@ -779,8 +779,96 @@ export default function GlobeViewer({
         </div>
       </div>
 
-      {/* ── Top-Right: 3D Globe / 2D Map Switcher & Layer Tools ── */}
+      {/* ── Top-Right: Search, 3D Globe / 2D Map Switcher & Layer Tools ── */}
       <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, display: 'flex', gap: 6, alignItems: 'center' }}>
+        {/* Tactical Search & Geolocation Bar */}
+        <div style={{ position: 'relative', minWidth: 240, maxWidth: 320 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            background: 'rgba(18, 18, 22, 0.95)',
+            border: `1px solid ${isSearchOpen && searchQuery ? '#00F0FF' : '#27272a'}`,
+            borderRadius: 6, backdropFilter: 'blur(16px)',
+            boxShadow: isSearchOpen && searchQuery ? '0 0 16px rgba(0,240,255,0.25)' : '0 4px 20px rgba(0,0,0,0.5)',
+            padding: '5px 10px', transition: 'all 0.15s ease',
+          }}>
+            <Search size={13} color={isSearching ? '#00F0FF' : '#71717a'} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => { if (searchQuery.trim()) setIsSearchOpen(true); }}
+              placeholder="Search place, ISRO facility, lat, lon..."
+              style={{
+                background: 'transparent', border: 'none', outline: 'none',
+                color: '#fafafa', fontSize: 11, fontFamily: "'Inter', sans-serif",
+                width: '100%', minWidth: 160,
+              }}
+            />
+            {isSearching && (
+              <Loader2 size={12} color="#00F0FF" className="animate-spin" />
+            )}
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                title="Clear Search"
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: '#71717a', padding: 0, display: 'flex', alignItems: 'center',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fafafa'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#71717a'; }}
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Search Results Dropdown */}
+          {isSearchOpen && searchResults.length > 0 && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+                background: 'rgba(15, 15, 20, 0.98)', backdropFilter: 'blur(20px)',
+                border: '1px solid #27272a', borderRadius: 8,
+                boxShadow: '0 12px 36px rgba(0,0,0,0.7), 0 0 1px rgba(255,255,255,0.1)',
+                maxHeight: 280, overflowY: 'auto', zIndex: 50,
+                padding: '4px 0',
+              }}
+            >
+              {searchResults.map((result, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => flyToSearchResult(result)}
+                  style={{
+                    padding: '8px 12px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'flex-start', gap: 9,
+                    borderBottom: idx === searchResults.length - 1 ? 'none' : '1px solid rgba(39,39,42,0.4)',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 240, 255, 0.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <MapPin size={13} color="#00F0FF" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {result.name}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#a1a1aa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {result.description}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#38bdf8', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {result.coordinates[1]?.toFixed(4)}°N, {result.coordinates[0]?.toFixed(4)}°E
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* 3D Globe / 2D Map Mode Switcher */}
         <div style={{
           display: 'flex', background: 'rgba(18, 18, 22, 0.95)',
