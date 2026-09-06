@@ -8,12 +8,11 @@ import React, { useRef, useEffect } from 'react';
  *    - Volumetric Lambertian curvature shadow as the sphere curves away into space / backside
  *    - Delicate high-altitude inner Rayleigh atmospheric limb haze
  *
- * Full 3D Multi-Axis Rotation Support (X-axis pitch & Y-axis bearing):
- * - Seamlessly tracks camera pitch (tilt about X axis) and bearing (rotation about Y/Z axis).
- * - Projects the apparent center shift and foreshortening ellipse dynamically.
- * - Gracefully dissolves as camera tilts into high-pitch horizon angles (> 15° to 35°)
- *   or zooms in towards the surface (z = 2.1 to 2.8).
- * - Zero frame latency (synchronous map render hooks).
+ * Projection-Locked via Spherical Geodesy:
+ *   We project the map center and 8 limb probe points computed with proper great-circle
+ *   destination formulas through map.project(). This handles poles, pitch, bearing, zoom,
+ *   and viewport resize with zero drift — the atmosphere is mathematically locked to
+ *   MapLibre's internal perspective engine.
  */
 export default function AtmosphereOverlay({ map, projection }) {
   const backCanvasRef = useRef(null);
@@ -53,6 +52,102 @@ export default function AtmosphereOverlay({ map, projection }) {
       return { w, h };
     };
 
+    /**
+     * Spherical geodesy: compute the destination point on the unit sphere given
+     * a start (lat, lng) in degrees, a bearing in degrees, and an angular
+     * distance in degrees. Returns {lat, lng} in degrees.
+     *
+     * This is the Vincenty direct formula and works correctly at ALL latitudes,
+     * including poles where simple lat/lng offsets fail.
+     */
+    const destinationPoint = (lat, lng, bearingDeg, angDistDeg) => {
+      const toRad = Math.PI / 180;
+      const toDeg = 180 / Math.PI;
+      const φ1 = lat * toRad;
+      const λ1 = lng * toRad;
+      const θ = bearingDeg * toRad;
+      const δ = angDistDeg * toRad;
+
+      const sinφ1 = Math.sin(φ1);
+      const cosφ1 = Math.cos(φ1);
+      const sinδ = Math.sin(δ);
+      const cosδ = Math.cos(δ);
+
+      const φ2 = Math.asin(sinφ1 * cosδ + cosφ1 * sinδ * Math.cos(θ));
+      const λ2 = λ1 + Math.atan2(
+        Math.sin(θ) * sinδ * cosφ1,
+        cosδ - sinφ1 * Math.sin(φ2)
+      );
+
+      return {
+        lat: φ2 * toDeg,
+        lng: ((λ2 * toDeg) + 540) % 360 - 180  // Normalize to [-180, 180]
+      };
+    };
+
+    /**
+     * Compute the screen-space center and radius of the globe disc.
+     *
+     * Projects the map center, then 8 probe points at 80° great-circle distance
+     * along bearings 0°, 45°, 90°, …, 315° using proper spherical geodesy.
+     * These probes sit near the visible limb of the globe regardless of which
+     * part of the Earth is centered (equator, pole, or anything in between).
+     * The average screen distance from center to valid probes gives R.
+     */
+    const computeGlobeScreenGeometry = (w, h) => {
+      try {
+        const center = map.getCenter();
+        const cLat = center.lat;
+        const cLng = center.lng;
+
+        // Project the geographic center to screen coordinates
+        const screenCenter = map.project([cLng, cLat]);
+        const cx = screenCenter.x;
+        const cy = screenCenter.y;
+
+        if (!isFinite(cx) || !isFinite(cy)) return null;
+
+        // Probe at 80° great-circle distance along 8 compass bearings
+        const probeAngularDist = 80; // degrees of arc on the sphere
+        const bearings = [0, 45, 90, 135, 180, 225, 270, 315];
+
+        const distances = [];
+        for (const brg of bearings) {
+          const dest = destinationPoint(cLat, cLng, brg, probeAngularDist);
+          const p = map.project([dest.lng, dest.lat]);
+
+          if (p && isFinite(p.x) && isFinite(p.y)) {
+            const dx = p.x - cx;
+            const dy = p.y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Sanity: reject impossibly small or impossibly large results
+            if (dist > 5 && dist < Math.max(w, h) * 3) {
+              distances.push(dist);
+            }
+          }
+        }
+
+        // Need at least 3 valid probes for reliable radius
+        if (distances.length < 3) return null;
+
+        // Use the median of distances for robustness against outliers
+        distances.sort((a, b) => a - b);
+        const mid = Math.floor(distances.length / 2);
+        const medianDist = distances.length % 2 === 0
+          ? (distances[mid - 1] + distances[mid]) / 2
+          : distances[mid];
+
+        // The probes are at 80° arc distance. On the projected disc, 80° from
+        // center maps to R * sin(80°) ≈ R * 0.9848 of the full globe radius R.
+        // So R = medianDist / sin(80°).
+        const R = medianDist / Math.sin(80 * Math.PI / 180);
+
+        return { cx, cy, R };
+      } catch (e) {
+        return null;
+      }
+    };
+
     const render = () => {
       if (isDisposed) return;
 
@@ -66,57 +161,28 @@ export default function AtmosphereOverlay({ map, projection }) {
       if (projection !== 'globe') return;
 
       const zoom = map.getZoom();
-      const pitch = map.getPitch ? map.getPitch() : 0;
-      const bearing = map.getBearing ? map.getBearing() : 0;
 
-      // 1. Zoom Dissolve:
-      // In orbital view (z <= 2.1): full planetary atmosphere
-      // Between z = 2.1 and z = 2.8: Dissolves smoothly as camera enters atmosphere
-      // At regional / ground level (z >= 2.8): 0% opacity (crystal-clear satellite imagery)
+      // Zoom Dissolve: orbital (z <= 2.1) full, transition (2.1–2.8), ground (>= 2.8) hidden
       let opacity = 1.0;
       if (zoom > 2.1) {
         opacity = Math.max(0, 1.0 - (zoom - 2.1) / 0.7);
       }
       if (opacity <= 0) return;
 
-      // 2. Pitch Dissolve:
-      // The spherical planetary disc atmosphere is designed for orbital overview (pitch near 0).
-      // When the user tilts/rotates about the X-axis (pitch > 3 deg) to inspect oblique terrain,
-      // the atmosphere gracefully dissolves to 0 so no misaligned ring appears on tilted ground.
-      if (pitch > 3) {
-        const pitchFactor = Math.max(0, 1.0 - (pitch - 3) / 7.0);
-        opacity *= pitchFactor;
-      }
-      if (opacity <= 0) return;
+      // Compute actual screen geometry from MapLibre's projection
+      const geo = computeGlobeScreenGeometry(w, h);
+      if (!geo) return;
 
-      const pitchRad = (pitch * Math.PI) / 180;
-      const bearingRad = (bearing * Math.PI) / 180;
+      const { cx, cy, R } = geo;
 
-      // Base sphere center at screen center
-      const cx = w / 2;
-      const cy = h / 2;
-
-      // Exact sub-pixel quadratic radius fit for MapLibre GL v5 perspective globe
-      const dz = Math.max(0, zoom - 1.0);
-      const baseR = 150.87 + 83.92 * dz + 32.83 * dz * dz;
-      const R = Math.max(20, (h / 670) * baseR);
-
-      // Apparent shift of sphere center when pitched (perspective shift along camera tilt vector)
-      const shift = R * 0.96 * Math.sin(pitchRad);
-      const dx = -shift * Math.sin(bearingRad);
-      const dy = shift * Math.cos(bearingRad);
-
-      // Vertical foreshortening of apparent ellipse under pitch
-      const scaleY = Math.max(0.25, Math.cos(pitchRad * 0.75));
+      // Safety: if radius is too small or center is way off screen, skip
+      if (R < 15 || cx < -R * 2 || cx > w + R * 2 || cy < -R * 2 || cy > h + R * 2) return;
 
       // ─── 1. BACK CANVAS: Celestial Atmospheric Corona (Rayleigh Outer Glow) ───
       bCtx.save();
       bCtx.globalAlpha = opacity;
-      bCtx.translate(cx + dx, cy + dy);
-      bCtx.rotate(-bearingRad);
-      bCtx.scale(1.0, scaleY);
 
-      const corona = bCtx.createRadialGradient(0, 0, R * 0.95, 0, 0, R * 1.18);
+      const corona = bCtx.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * 1.18);
       corona.addColorStop(0, 'rgba(56, 189, 248, 0.42)');
       corona.addColorStop(0.18, 'rgba(14, 165, 233, 0.28)');
       corona.addColorStop(0.45, 'rgba(2, 132, 199, 0.12)');
@@ -125,19 +191,16 @@ export default function AtmosphereOverlay({ map, projection }) {
 
       bCtx.fillStyle = corona;
       bCtx.beginPath();
-      bCtx.arc(0, 0, R * 1.18, 0, Math.PI * 2);
+      bCtx.arc(cx, cy, R * 1.18, 0, Math.PI * 2);
       bCtx.fill();
       bCtx.restore();
 
       // ─── 2. FRONT CANVAS: Frontal-Sun Spherical Shading & Inner Limb Haze ───
       fCtx.save();
       fCtx.globalAlpha = opacity;
-      fCtx.translate(cx + dx, cy + dy);
-      fCtx.rotate(-bearingRad);
-      fCtx.scale(1.0, scaleY);
 
       // A. Volumetric Lambertian Depth Shading (Sun is the User)
-      const shadow = fCtx.createRadialGradient(0, 0, 0, 0, 0, R);
+      const shadow = fCtx.createRadialGradient(cx, cy, 0, cx, cy, R);
       shadow.addColorStop(0, 'rgba(0, 0, 0, 0)');
       shadow.addColorStop(0.65, 'rgba(0, 0, 0, 0)');
       shadow.addColorStop(0.80, 'rgba(2, 6, 23, 0.18)');
@@ -147,11 +210,11 @@ export default function AtmosphereOverlay({ map, projection }) {
 
       fCtx.fillStyle = shadow;
       fCtx.beginPath();
-      fCtx.arc(0, 0, R, 0, Math.PI * 2);
+      fCtx.arc(cx, cy, R, 0, Math.PI * 2);
       fCtx.fill();
 
       // B. High-Altitude Rayleigh Scattering Inner Limb Haze
-      const innerHaze = fCtx.createRadialGradient(0, 0, R * 0.86, 0, 0, R);
+      const innerHaze = fCtx.createRadialGradient(cx, cy, R * 0.86, cx, cy, R);
       innerHaze.addColorStop(0, 'rgba(56, 189, 248, 0)');
       innerHaze.addColorStop(0.5, 'rgba(56, 189, 248, 0.10)');
       innerHaze.addColorStop(0.85, 'rgba(56, 189, 248, 0.32)');
@@ -159,7 +222,7 @@ export default function AtmosphereOverlay({ map, projection }) {
 
       fCtx.fillStyle = innerHaze;
       fCtx.beginPath();
-      fCtx.arc(0, 0, R, 0, Math.PI * 2);
+      fCtx.arc(cx, cy, R, 0, Math.PI * 2);
       fCtx.fill();
 
       fCtx.restore();

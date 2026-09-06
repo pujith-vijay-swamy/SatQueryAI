@@ -138,6 +138,38 @@ def test_fastapi_endpoints():
     assert "text_response" in payload
     assert "execution_trace" in payload
     assert payload["execution_trace"]["task_classified"] == "BITEMPORAL_CHANGE_DETECTION"
+    # 5. GeoChat Config
+    r_geo_get = client.get("/api/config/geochat")
+    assert r_geo_get.status_code == 200
+
+    r_geo_set = client.post("/api/config/geochat", json={"url": ""})
+    assert r_geo_set.status_code == 200
+    assert r_geo_set.json()["status"] == "SUCCESS"
+
+    # 6. Upload & Compare with Sample Images
+    t1_path = SAMPLES_DIR / "ahmedabad" / "t1_cartosat_2021.png"
+    t2_path = SAMPLES_DIR / "ahmedabad" / "t2_cartosat_2024.png"
+    if t1_path.exists() and t2_path.exists():
+        with open(t1_path, "rb") as f1, open(t2_path, "rb") as f2:
+            r_upload = client.post(
+                "/api/upload/compare",
+                files={
+                    "t1_file": ("t1.png", f1, "image/png"),
+                    "t2_file": ("t2.png", f2, "image/png"),
+                },
+                data={
+                    "title": "Automated Test Comparison AOI",
+                    "t1_label": "2021 Test",
+                    "t2_label": "2024 Test",
+                }
+            )
+            assert r_upload.status_code == 200
+            up_data = r_upload.json()
+            assert up_data["status"] == "SUCCESS"
+            assert "scene" in up_data
+            assert "analysis" in up_data
+            assert up_data["analysis"]["visual_artifact_url"].startswith("/static/masks/")
+
     print("[ALL TESTS PASSED SUCCESSFULLY]")
 
 if __name__ == "__main__":

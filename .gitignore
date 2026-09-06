@@ -48,5 +48,6 @@ scratch/
 .tempmediaStorage/\n
 # Dynamic sample outputs and previews
 samples/dynamic/
+samples/custom/
 backend/static/masks/
 backend/static/previews/

@@ -45,8 +45,9 @@ export default function App() {
   const [loraActive, setLoraActive] = useState(false);
   const [bitCdActive, setBitCdActive] = useState(false);
   const [bitCdValAcc, setBitCdValAcc] = useState(0.9469);
+  const [geochatUrl, setGeochatUrl] = useState('');
 
-  // Layout & Modal states: At first, only 3D globe is visible!
+  // Layout & Modal states
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBitemporalModalOpen, setIsBitemporalModalOpen] = useState(false);
 
@@ -54,7 +55,11 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [sRes, hRes] = await Promise.all([fetch('/api/scenes'), fetch('/api/health')]);
+        const [sRes, hRes, gRes] = await Promise.all([
+          fetch('/api/scenes'),
+          fetch('/api/health'),
+          fetch('/api/config/geochat')
+        ]);
         if (sRes.ok) {
           const d = await sRes.json();
           setScenes(d.scenes || {});
@@ -66,6 +71,10 @@ export default function App() {
           setLoraActive(Boolean(hd.lora_adapter_present));
           setBitCdActive(Boolean(hd.bit_cd_model_present));
           if (hd.bit_cd_val_acc) setBitCdValAcc(hd.bit_cd_val_acc);
+        }
+        if (gRes.ok) {
+          const gd = await gRes.json();
+          if (gd.url) setGeochatUrl(gd.url);
         }
       } catch (e) { console.error('Init:', e); }
     })();
@@ -100,9 +109,20 @@ export default function App() {
     finally { setIsLoading(false); }
   };
 
+  // ── Handle Custom Raster Upload Success ──
+  const handleCustomUploadSuccess = (uploadData) => {
+    if (uploadData.scene) {
+      setScenes(prev => ({ ...prev, [uploadData.scene.id]: uploadData.scene }));
+      setActiveScene(uploadData.scene);
+    }
+    if (uploadData.preflight) setPreflightData(uploadData.preflight);
+    if (uploadData.analysis) setAnalysisResult(uploadData.analysis);
+    setIsChatOpen(true);
+  };
+
   // ── On-demand temporal swath tasking (Sentinel-2 COGs) ──
   const handleTaskSwath = async ({ lat, lon, t1_year, t2_year, radius_km, max_cloud, season }) => {
-    setIsChatOpen(true); // Automatically open chat when swat tool tasks a location!
+    setIsChatOpen(true);
     setIsLoading(true);
     try {
       const r = await fetch('/api/swath/task', {
@@ -145,6 +165,9 @@ export default function App() {
           bitCdValAcc={bitCdValAcc}
           isChatOpen={isChatOpen}
           onToggleChat={() => setIsChatOpen(prev => !prev)}
+          onOpenUploadModal={() => setIsBitemporalModalOpen(true)}
+          geochatUrl={geochatUrl}
+          onUpdateGeochatUrl={(url) => setGeochatUrl(url)}
         />
       </ErrorBoundary>
 
@@ -229,13 +252,14 @@ export default function App() {
         )}
       </div>
 
-      {/* ── High-Resolution Bitemporal Popup Modal (1:1 Exact Resolution) ── */}
+      {/* ── High-Resolution Bitemporal Popup Modal (1:1 Exact Resolution & Upload Workspace) ── */}
       <BitemporalModal
         isOpen={isBitemporalModalOpen}
         onClose={() => setIsBitemporalModalOpen(false)}
         activeScene={activeScene}
         visualArtifactUrl={analysisResult?.visual_artifact_url}
         analysisResult={analysisResult}
+        onCustomUploadSuccess={handleCustomUploadSuccess}
       />
     </div>
   );

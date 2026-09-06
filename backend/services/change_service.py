@@ -13,6 +13,7 @@ import numpy as np
 from backend.core.config import MASKS_DIR, BIT_CD_WEIGHT_PATH, BIT_CD_ACTIVE
 from backend.core.gis_validator import GisValidator
 from backend.services.bit_model import get_bit_model, run_bit_inference
+from backend.services.vqa_service import VqaService
 
 class ChangeDetectionService:
     def __init__(self):
@@ -25,6 +26,7 @@ class ChangeDetectionService:
             self.model_name = f"Bitemporal Image Transformer (BIT_CD) [{BIT_CD_WEIGHT_PATH.name} — {acc:.1f}% Acc]"
         else:
             self.model_name = "Siamese-Spectral Difference + GeoChat-7B (BigEarthNet LoRA)"
+        self.vqa_service = VqaService()
 
     def detect_changes(self, scene_id: str, t1_path: str, t2_path: str, query: str = "") -> dict:
         """
@@ -143,8 +145,7 @@ class ChangeDetectionService:
         # Scene context
         from backend.core.config import SCENE_CATALOG
         scene = SCENE_CATALOG.get(scene_id, {})
-        location_name = scene.get("location") or scene.get("title") or f"Target [{scene_id}]"
-        sensor_name = scene.get("sensor", "Satellite Sensor")
+        location_name = scene.get("location") or scene.get("title") or scene.get("name") or f"Target [{scene_id}]"
         gsd_val = meta_t2.get("resolution_gsd") or scene.get("resolution_gsd", "10.0m")
         crs_val = meta_t2.get("crs") or scene.get("crs", "EPSG:4326")
 
@@ -183,10 +184,21 @@ class ChangeDetectionService:
         latency_ms = round((time.perf_counter() - start_time) * 1000.0, 1)
         engine_desc = "Fine-tuned Bitemporal Image Transformer (BIT_CD)" if neural_active else "Spectral Difference Engine"
 
+        # Check if remote GeoChat is available to enrich response
+        remote_geochat_res = None
+        if self.vqa_service.is_remote_geochat_active():
+            remote_geochat_res = self.vqa_service.query_remote_geochat(out_img, query or f"Describe the observed changes between {t1_date} and {t2_date}.")
+
         # Step 6: Query-specific dynamic text response synthesis
         q_lower = query.lower() if query else ""
 
-        if any(k in q_lower for k in ["riverbed", "river", "water", "waterbody", "lake", "stream", "canal", "sandbar", "sediment", "alluvial", "hydrolog", "riparian", "embankment", "channel", "reservoir"]):
+        if remote_geochat_res and "response" in remote_geochat_res:
+            text_response = (
+                f"[{engine_desc} + GeoChat-7B (Kaggle GPU)] {remote_geochat_res['response']} "
+                f"Quantified change: {changed_area_km2} km² ({change_pct}% of surveyed area), "
+                f"concentrated in {dominant_quadrants}. Resolution: {gsd_display} ({crs_val})."
+            )
+        elif any(k in q_lower for k in ["riverbed", "river", "water", "waterbody", "lake", "stream", "canal", "sandbar", "sediment", "alluvial", "hydrolog", "riparian", "embankment", "channel", "reservoir"]):
             morph_direction = "expansion" if delta_water_km2 > 0 else "contraction/retention" if delta_water_km2 < 0 else "equilibrium"
             sand_direction = "accretion/exposure" if delta_sandbar_km2 > 0 else "inundation/recession" if delta_sandbar_km2 < 0 else "stable"
             embankment_text = f" Additionally, {riverfront_mod_km2} km² of riparian channel boundaries underwent engineered embankment/paving modifications." if riverfront_mod_km2 > 0.01 else ""
@@ -198,7 +210,7 @@ class ChangeDetectionService:
                 f"Riparian corridor alterations are primarily aligned along the {dominant_quadrants}.{embankment_text} "
                 f"Validated at {gsd_display} projected in {crs_val} with {confidence_score*100:.1f}% neural confidence."
             )
-        elif any(k in q_lower for k in ["vegetat", "crop", "forest", "green", "agriculture", "canopy"]):
+        elif any(k in q_lower for k in ["vegetat", "crop", "forest", "green", "agriculture", "canopy", "tree", "deforest"]):
             text_response = (
                 f"[{engine_desc}] Vegetative Analysis for {location_name} between {t1_date} and {t2_date}: "
                 f"Identified a net vegetative loss of {veg_loss_km2} km² ({round(veg_loss_km2 / max(total_area_km2, 0.001) * 100, 2)}% of AOI) "
@@ -206,7 +218,7 @@ class ChangeDetectionService:
                 f"The depletion is predominantly concentrated in the {dominant_quadrants}, where mean NDVI shifted by -{abs(round(float(np.mean(delta_ndvi[change_mask])), 3)) if changed_pixels else 0.0} units. "
                 f"Model confidence: {confidence_score*100:.1f}% across {gsd_display} resolution."
             )
-        elif any(k in q_lower for k in ["transit", "built-up", "infrastructure", "concrete", "industrial", "road", "expansion"]):
+        elif any(k in q_lower for k in ["transit", "built-up", "infrastructure", "concrete", "industrial", "road", "expansion", "building"]):
             text_response = (
                 f"[{engine_desc}] Built-Up & Infrastructure Detection across {location_name}: "
                 f"Detected +{built_km2} km² of impervious surface and built-up conversion between {t1_date} and {t2_date} "
@@ -214,7 +226,7 @@ class ChangeDetectionService:
                 f"High-density structural additions and surface paving are concentrated in the {dominant_quadrants}. "
                 f"Co-registration verified across {crs_val} at {gsd_display} with {confidence_score*100:.1f}% neural confidence."
             )
-        elif any(k in q_lower for k in ["where", "occur", "quadrant", "direction", "location"]):
+        elif any(k in q_lower for k in ["where", "occur", "quadrant", "direction", "location", "sector"]):
             text_response = (
                 f"[{engine_desc}] Spatial Location Breakdown for {location_name} ({t1_date} to {t2_date}): "
                 f"Total surface alteration of {changed_area_km2} km² ({change_pct}% of total tile) is spatially distributed as: "

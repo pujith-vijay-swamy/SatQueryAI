@@ -15,6 +15,7 @@ MASKS_DIR = STATIC_DIR / "masks"
 PREVIEWS_DIR = STATIC_DIR / "previews"
 SAMPLES_DIR = ROOT_DIR / "samples"
 DYNAMIC_SAMPLES_DIR = SAMPLES_DIR / "dynamic"
+CUSTOM_SAMPLES_DIR = SAMPLES_DIR / "custom"
 WEIGHTS_DIR = ROOT_DIR / "finetune" / "weights"
 
 # Ensure runtime directories exist
@@ -22,6 +23,7 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(MASKS_DIR, exist_ok=True)
 os.makedirs(PREVIEWS_DIR, exist_ok=True)
 os.makedirs(DYNAMIC_SAMPLES_DIR, exist_ok=True)
+os.makedirs(CUSTOM_SAMPLES_DIR, exist_ok=True)
 os.makedirs(WEIGHTS_DIR, exist_ok=True)
 
 # Geodetic Projections & Constants

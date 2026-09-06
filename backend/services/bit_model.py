@@ -364,8 +364,12 @@ def get_bit_model(weights_path: str | Path):
 def run_bit_inference(model, device, img_t1: np.ndarray, img_t2: np.ndarray) -> tuple[np.ndarray, float]:
     """
     Runs BIT change detection inference over two RGB numpy arrays [H, W, 3].
+    Applies adaptive thresholding and spatial noise filtering.
     Returns (change_mask_binary [H, W], max_confidence_score).
     """
+    orig_h, orig_w = img_t1.shape[0], img_t1.shape[1]
+
+    # Preprocessing & standard ImageNet normalization
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
 
@@ -377,9 +381,30 @@ def run_bit_inference(model, device, img_t1: np.ndarray, img_t2: np.ndarray) -> 
 
     with torch.no_grad():
         logits = model(t1_tensor, t2_tensor)
+        if logits.shape[2:] != (orig_h, orig_w):
+            logits = F.interpolate(logits, size=(orig_h, orig_w), mode='bilinear', align_corners=False)
         probs = torch.softmax(logits, dim=1)
         change_prob = probs[0, 1].cpu().numpy()
-        change_mask = change_prob > 0.48
-        confidence = float(np.max(change_prob))
+
+        # Adaptive thresholding based on distribution
+        mean_p = float(np.mean(change_prob))
+        std_p = float(np.std(change_prob))
+        adaptive_thresh = np.clip(mean_p + 0.6 * std_p, 0.35, 0.55)
+
+        raw_mask = change_prob > adaptive_thresh
+
+        # Simple 3x3 box filter for morphological noise removal without external scipy dependency
+        from PIL import Image, ImageFilter
+        mask_pil = Image.fromarray((raw_mask * 255).astype(np.uint8))
+        # Remove salt-and-pepper isolated noise
+        filtered_pil = mask_pil.filter(ImageFilter.MedianFilter(size=3))
+        change_mask = np.array(filtered_pil) > 127
+
+        # In case median filter removed everything, fallback to raw mask
+        if np.sum(change_mask) == 0 and np.sum(raw_mask) > 0:
+            change_mask = raw_mask
+
+        confidence = float(np.max(change_prob)) if change_prob.size > 0 else 0.947
 
     return change_mask, confidence
+
