@@ -110,10 +110,11 @@ async def vqa_inference(req: VqaRequest):
         raise HTTPException(status_code=500, detail=f"GeoChat inference error: {str(e)}")
 
 # 4. Entrypoint with ngrok tunnel
-def start_server(ngrok_authtoken: str = "3IxapVOfJhw4FtfO6HJAvFQHRr8_KeVeqvLrzYr1scfUpahA", port: int = 8000):
+def start_server(ngrok_authtoken: str = None, port: int = 8000):
     from pyngrok import ngrok
-    if ngrok_authtoken:
-        ngrok.set_auth_token(ngrok_authtoken)
+    token = ngrok_authtoken or os.environ.get("NGROK_AUTHTOKEN", "")
+    if token:
+        ngrok.set_auth_token(token)
 
     tunnel = ngrok.connect(port)
     print("\n" + "=" * 60)
@@ -126,4 +127,5 @@ def start_server(ngrok_authtoken: str = "3IxapVOfJhw4FtfO6HJAvFQHRr8_KeVeqvLrzYr
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
+    # In Kaggle: pass your token or set NGROK_AUTHTOKEN env var
     start_server()
