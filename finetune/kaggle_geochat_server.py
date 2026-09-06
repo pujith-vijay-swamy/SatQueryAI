@@ -110,7 +110,7 @@ async def vqa_inference(req: VqaRequest):
         raise HTTPException(status_code=500, detail=f"GeoChat inference error: {str(e)}")
 
 # 4. Entrypoint with ngrok tunnel
-def start_server(ngrok_authtoken: str = None, port: int = 8000):
+def start_server(ngrok_authtoken: str = "3IxapVOfJhw4FtfO6HJAvFQHRr8_KeVeqvLrzYr1scfUpahA", port: int = 8000):
     from pyngrok import ngrok
     if ngrok_authtoken:
         ngrok.set_auth_token(ngrok_authtoken)
@@ -126,5 +126,4 @@ def start_server(ngrok_authtoken: str = None, port: int = 8000):
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    # To run: start_server(ngrok_authtoken="YOUR_NGROK_TOKEN")
     start_server()
