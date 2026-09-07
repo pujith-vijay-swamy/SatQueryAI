@@ -48,7 +48,7 @@ export default function App() {
   const [geochatUrl, setGeochatUrl] = useState('');
 
   // Layout & Modal states
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [isBitemporalModalOpen, setIsBitemporalModalOpen] = useState(false);
 
   // ── Init ──
@@ -62,7 +62,12 @@ export default function App() {
         ]);
         if (sRes.ok) {
           const d = await sRes.json();
-          setScenes(d.scenes || {});
+          const loadedScenes = d.scenes || {};
+          setScenes(loadedScenes);
+          const sceneList = Object.values(loadedScenes);
+          if (sceneList.length > 0) {
+            setActiveScene(sceneList[0]);
+          }
         }
         if (hRes.ok) {
           const hd = await hRes.json();
