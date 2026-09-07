@@ -577,18 +577,76 @@ export default function GlobeViewer({
     }
   };
 
-  // Update footprint highlight when activeScene changes (without flying)
+  // Update footprint highlight or draw dynamic AOI when activeScene changes (without flying)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !activeScene) return;
-    Object.keys(sceneFootprints).forEach((id) => {
-      const isActive = id === activeScene.id;
-      try {
-        map.setPaintProperty(`footprint-fill-${id}`, 'fill-opacity', isActive ? 0.28 : 0.05);
-        map.setPaintProperty(`footprint-line-${id}`, 'line-width', isActive ? 3.0 : 1.5);
-        map.setPaintProperty(`footprint-line-${id}`, 'line-opacity', isActive ? 1.0 : 0.4);
-      } catch (_) {}
-    });
+
+    if (sceneFootprints[activeScene.id]) {
+      Object.keys(sceneFootprints).forEach((id) => {
+        const isActive = id === activeScene.id;
+        try {
+          map.setPaintProperty(`footprint-fill-${id}`, 'fill-opacity', isActive ? 0.28 : 0.05);
+          map.setPaintProperty(`footprint-line-${id}`, 'line-width', isActive ? 3.0 : 1.5);
+          map.setPaintProperty(`footprint-line-${id}`, 'line-opacity', isActive ? 1.0 : 0.4);
+        } catch (_) {}
+      });
+    } else if (activeScene.center_coords || activeScene.fetch_metadata?.bbox) {
+      const lat = activeScene.center_coords?.lat ?? activeScene.fetch_metadata?.lat;
+      const lon = activeScene.center_coords?.lon ?? activeScene.fetch_metadata?.lon;
+      const bbox = activeScene.fetch_metadata?.bbox;
+
+      let coords;
+      if (bbox) {
+        const [minLon, minLat, maxLon, maxLat] = bbox;
+        coords = [
+          [minLon, minLat],
+          [maxLon, minLat],
+          [maxLon, maxLat],
+          [minLon, maxLat],
+          [minLon, minLat]
+        ];
+      } else if (lat !== undefined && lon !== undefined) {
+        const rKm = 2.0;
+        const latDelta = rKm / 111.0;
+        const lonDelta = rKm / (111.0 * Math.cos(lat * Math.PI / 180));
+        coords = [
+          [lon - lonDelta, lat - latDelta],
+          [lon + lonDelta, lat - latDelta],
+          [lon + lonDelta, lat + latDelta],
+          [lon - lonDelta, lat + latDelta],
+          [lon - lonDelta, lat - latDelta]
+        ];
+      }
+
+      if (coords) {
+        const aoiGeoJSON = {
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [coords] },
+          properties: { label: activeScene.name || 'Tasked AOI' }
+        };
+
+        if (map.getSource('tasked-aoi-source')) {
+          map.getSource('tasked-aoi-source').setData(aoiGeoJSON);
+        } else {
+          try {
+            map.addSource('tasked-aoi-source', { type: 'geojson', data: aoiGeoJSON });
+            map.addLayer({
+              id: 'tasked-aoi-fill',
+              type: 'fill',
+              source: 'tasked-aoi-source',
+              paint: { 'fill-color': '#00F0FF', 'fill-opacity': 0.22 }
+            });
+            map.addLayer({
+              id: 'tasked-aoi-line',
+              type: 'line',
+              source: 'tasked-aoi-source',
+              paint: { 'line-color': '#00F0FF', 'line-width': 2.5 }
+            });
+          } catch (_) {}
+        }
+      }
+    }
   }, [activeScene, sceneFootprints]);
 
   // Switch Projection between 3D Globe and 2D Mercator Flat Map cleanly in-place
@@ -1216,90 +1274,7 @@ export default function GlobeViewer({
         </div>
       )}
 
-      {/* ── Search Bar: Geospatial Place & Facility Finder ── */}
-      <div style={{ position: 'absolute', top: taskSwathMode ? 114 : 66, right: 16, zIndex: 20, width: 330, transition: 'top 0.2s ease' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: 'rgba(18, 18, 22, 0.95)', backdropFilter: 'blur(16px)',
-          border: `1px solid ${isSearchOpen ? '#22c55e' : '#27272a'}`,
-          borderRadius: 6,
-          padding: '5px 11px', boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
-          transition: 'all 0.2s ease',
-        }}>
-          <button
-            onClick={() => { if (searchResults.length > 0) flyToSearchResult(searchResults[0]); }}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
-            title="Execute search"
-          >
-            <Search size={14} color={isSearching ? '#38bdf8' : '#71717a'} className={isSearching ? 'animate-pulse' : ''} />
-          </button>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            onFocus={() => { if (searchResults.length > 0) setIsSearchOpen(true); }}
-            placeholder="Search place, city, or lat,lon..."
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: '#fafafa', fontSize: 11, fontFamily: "'Inter', sans-serif",
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={clearSearch}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' }}
-              title="Clear search"
-            >
-              <X size={12} color="#71717a" />
-            </button>
-          )}
-        </div>
-
-        {/* Autocomplete Suggestions Dropdown */}
-        {isSearchOpen && searchResults.length > 0 && (
-          <div style={{
-            marginTop: 6, background: 'rgba(18, 18, 22, 0.98)', backdropFilter: 'blur(20px)',
-            border: '1px solid #27272a', borderRadius: 6, maxHeight: 260, overflowY: 'auto',
-            boxShadow: '0 12px 36px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column',
-          }}>
-            {searchResults.map((place, i) => (
-              <div
-                key={i}
-                data-search-item="true"
-                onClick={() => flyToSearchResult(place)}
-                style={{
-                  padding: '8px 12px', borderBottom: '1px solid rgba(39,39,42,0.4)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.12)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', paddingRight: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={12} color="#22c55e" />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#fafafa', fontFamily: "'Inter', sans-serif" }}>
-                      {place.name}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 10, color: '#a1a1aa', paddingLeft: 18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {place.description}
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#38bdf8',
-                  background: 'rgba(56, 189, 248, 0.08)', padding: '2px 5px', border: '1px solid rgba(56,189,248,0.2)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {place.coordinates[1].toFixed(2)}°, {place.coordinates[0].toFixed(2)}°
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      </div>
+    </div>
   );
 }
+

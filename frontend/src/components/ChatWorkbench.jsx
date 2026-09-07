@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronRight, ShieldCheck, AlertTriangle, Layers,
   Copy, Check, Activity, FileText, CornerDownLeft, Eye, Upload,
   FileUp, Image as ImageIcon, Plus, ArrowRight, CheckCircle2,
-  Zap, BrainCircuit, Scan
+  Zap, BrainCircuit, Scan, Columns2
 } from 'lucide-react';
 
 export default function ChatWorkbench({
@@ -25,6 +25,13 @@ export default function ChatWorkbench({
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef(null);
 
+  // Dual-Canvas Swipe / View Mode State
+  const [swipePos, setSwipePos] = useState(50);
+  const [isDraggingSwipe, setIsDraggingSwipe] = useState(false);
+  const [rasterViewMode, setRasterViewMode] = useState('swipe'); // 'swipe' or 'artifact'
+  const [activeTab, setActiveTab] = useState('rasters'); // 'rasters' or 'upload'
+  const swipeContainerRef = useRef(null);
+
   // Inline Quick Upload State
   const [file1, setFile1] = useState(null);
   const [file2, setFile2] = useState(null);
@@ -34,6 +41,32 @@ export default function ChatWorkbench({
   const [isDragOver2, setIsDragOver2] = useState(false);
   const [isSubmittingUpload, setIsSubmittingUpload] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState(null);
+
+  const onSwipeMove = (cx) => {
+    if (!swipeContainerRef.current) return;
+    const r = swipeContainerRef.current.getBoundingClientRect();
+    const pct = ((cx - r.left) / r.width) * 100;
+    setSwipePos(Math.max(2, Math.min(98, pct)));
+  };
+
+  useEffect(() => {
+    const handleUp = () => setIsDraggingSwipe(false);
+    const handleMove = (e) => {
+      if (isDraggingSwipe) onSwipeMove(e.clientX);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isDraggingSwipe]);
+
+  useEffect(() => {
+    if (analysisResult || activeScene) {
+      setActiveTab('rasters');
+    }
+  }, [analysisResult, activeScene]);
 
   const presets = activeScene?.sample_queries || [];
   const files = activeScene?.files || {};
@@ -301,44 +334,103 @@ export default function ChatWorkbench({
         flex: 1, overflowY: 'auto', padding: '14px 16px',
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
-        {/* ── Integrated Multi-Modal Raster Ingestion & Analysis Workspace ── */}
+        {/* ── Multi-Modal Raster Intelligence & Ingestion Workspace ── */}
         <div style={{
           borderRadius: 8, overflow: 'hidden',
           border: '1px solid #27272a', background: 'rgba(15, 15, 20, 0.98)',
           boxShadow: '0 6px 24px rgba(0,0,0,0.4)',
         }}>
-          {/* Workspace Title & Actions Header */}
+          {/* Tabs & Workspace Control Header */}
           <div style={{
             padding: '8px 12px', background: 'rgba(22, 22, 28, 0.98)',
             borderBottom: '1px solid #27272a',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: 6,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 700, color: '#fafafa' }}>
-              <Upload size={13} color="#00F0FF" />
-              <span>RASTER INGESTION WORKSPACE</span>
-              <span style={{ fontSize: 9, color: '#71717a', fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}>
-                (.TIF · .PNG · .JPG)
-              </span>
+            {/* Mode Switcher Tabs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                onClick={() => setActiveTab('rasters')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 4,
+                  background: activeTab === 'rasters' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${activeTab === 'rasters' ? 'rgba(34, 197, 94, 0.4)' : '#27272a'}`,
+                  color: activeTab === 'rasters' ? '#22c55e' : '#a1a1aa',
+                  fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                  cursor: 'pointer', transition: 'all 0.15s ease',
+                }}
+              >
+                <Layers size={12} color={activeTab === 'rasters' ? '#22c55e' : '#71717a'} />
+                <span>SWATH RASTERS</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('upload')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 4,
+                  background: activeTab === 'upload' ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${activeTab === 'upload' ? 'rgba(0, 240, 255, 0.4)' : '#27272a'}`,
+                  color: activeTab === 'upload' ? '#00F0FF' : '#a1a1aa',
+                  fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                  cursor: 'pointer', transition: 'all 0.15s ease',
+                }}
+              >
+                <Upload size={12} color={activeTab === 'upload' ? '#00F0FF' : '#71717a'} />
+                <span>UPLOAD CUSTOM</span>
+                {(file1 || file2) && (
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00F0FF' }} />
+                )}
+              </button>
             </div>
 
+            {/* Actions on Active Tab */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {(file1 || file2) && (
-                <button
-                  onClick={handleClearAll}
-                  title="Clear Selected Uploads"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '3px 7px', borderRadius: 4,
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#ef4444', fontSize: 10, fontWeight: 600,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    cursor: 'pointer',
-                  }}
-                >
-                  <X size={10} />
-                  <span>RESET</span>
-                </button>
+              {activeTab === 'rasters' && (
+                <>
+                  <button
+                    onClick={() => setRasterViewMode(prev => prev === 'swipe' ? (visualArtifactUrl ? 'artifact' : 'swipe') : 'swipe')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '3px 8px', borderRadius: 4,
+                      background: rasterViewMode === 'swipe' ? 'rgba(34,197,94,0.1)' : 'rgba(56,189,248,0.1)',
+                      border: `1px solid ${rasterViewMode === 'swipe' ? 'rgba(34,197,94,0.3)' : 'rgba(56,189,248,0.3)'}`,
+                      color: rasterViewMode === 'swipe' ? '#22c55e' : '#38bdf8',
+                      fontSize: 10, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {rasterViewMode === 'swipe' ? (
+                      <>
+                        <Columns2 size={11} />
+                        <span>T1 ⟷ T2 SWIPE</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={11} />
+                        <span>CHANGE MASK</span>
+                      </>
+                    )}
+                  </button>
+
+                  {visualArtifactUrl && rasterViewMode === 'swipe' && (
+                    <button
+                      onClick={() => setRasterViewMode('artifact')}
+                      title="View Neural Evidence Mask"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 4,
+                        background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)',
+                        color: '#38bdf8', fontSize: 10, fontWeight: 600,
+                        fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer',
+                      }}
+                    >
+                      <Sparkles size={11} />
+                      <span>MASK</span>
+                    </button>
+                  )}
+                </>
               )}
 
               <button
@@ -357,167 +449,299 @@ export default function ChatWorkbench({
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#3f3f46'; }}
               >
                 <Maximize2 size={10} />
-                <span>INSPECT 1:1</span>
+                <span>1:1 VIEW</span>
               </button>
             </div>
           </div>
 
-          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {uploadFeedback && (
+          {/* ── View 1: Active Swath / Scene Raster Viewer (Interactive Draggable Swipe) ── */}
+          {activeTab === 'rasters' && (
+            <div>
+              <div
+                ref={swipeContainerRef}
+                onMouseDown={(e) => { setIsDraggingSwipe(true); onSwipeMove(e.clientX); }}
+                style={{
+                  position: 'relative', width: '100%', height: 220,
+                  cursor: rasterViewMode === 'swipe' ? 'ew-resize' : 'default',
+                  background: '#09090b', overflow: 'hidden', userSelect: 'none',
+                }}
+              >
+                {rasterViewMode === 'artifact' && visualArtifactUrl ? (
+                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    <img
+                      src={visualArtifactUrl}
+                      alt="BiT-CD Change Detection Evidence Mask"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#09090b' }}
+                    />
+                    <div style={{
+                      position: 'absolute', top: 8, left: 8,
+                      padding: '3px 8px', borderRadius: 4, background: 'rgba(9,9,11,0.92)',
+                      backdropFilter: 'blur(8px)', border: '1px solid rgba(56,189,248,0.4)',
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: '#38bdf8',
+                    }}>
+                      BIT-CD NEURAL EVIDENCE MASK
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Right Image (T2 / Observation) */}
+                    <div style={{ position: 'absolute', inset: 0 }}>
+                      <img
+                        src={rightImg}
+                        alt={rightLbl}
+                        draggable={false}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{
+                        position: 'absolute', bottom: 8, right: 8,
+                        padding: '3px 8px', borderRadius: 4, background: 'rgba(9,9,11,0.88)',
+                        backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)',
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 600, color: '#38bdf8',
+                      }}>
+                        {rightLbl}
+                      </div>
+                    </div>
+
+                    {/* Left Image (T1 / Baseline / Optical) Clipped */}
+                    <div style={{
+                      position: 'absolute', inset: 0, width: `${swipePos}%`, overflow: 'hidden',
+                      borderRight: '2px solid #22c55e',
+                    }}>
+                      <img
+                        src={leftImg}
+                        alt={leftLbl}
+                        draggable={false}
+                        style={{
+                          position: 'absolute', top: 0, left: 0, height: '100%', objectFit: 'cover',
+                          width: swipeContainerRef.current?.clientWidth || '100%', maxWidth: 'none',
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute', bottom: 8, left: 8,
+                        padding: '3px 8px', borderRadius: 4, background: 'rgba(9,9,11,0.88)',
+                        backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)',
+                        fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 600, color: '#22c55e',
+                      }}>
+                        {leftLbl}
+                      </div>
+                    </div>
+
+                    {/* Center Split Slider Handle */}
+                    <div style={{
+                      position: 'absolute', top: 0, bottom: 0,
+                      left: `${swipePos}%`, transform: 'translateX(-50%)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      pointerEvents: 'none',
+                    }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(18, 18, 22, 0.95)', border: '2px solid #22c55e',
+                        boxShadow: '0 0 12px rgba(34,197,94,0.6)',
+                      }}>
+                        <Columns2 size={12} color="#22c55e" />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Sub-bar below raster canvas */}
               <div style={{
-                padding: '6px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', fontSize: 11,
+                padding: '6px 12px', background: 'rgba(18, 18, 22, 0.98)',
+                borderTop: '1px solid #27272a', display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
               }}>
-                {uploadFeedback}
-              </div>
-            )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#71717a' }}>
+                  <span>CRS: <span style={{ color: '#38bdf8' }}>{crs}</span></span>
+                  <span>·</span>
+                  <span>RES: <span style={{ color: '#fafafa' }}>{gsd}</span></span>
+                </div>
 
-            {/* Dual Ingestion Dropzones */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {/* Dropzone 1 (T1 / Primary) */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setIsDragOver1(true); }}
-                onDragLeave={() => setIsDragOver1(false)}
-                onDrop={handleDrop1}
-                style={{
-                  border: `1px ${file1 ? 'solid #00F0FF' : isDragOver1 ? 'dashed #00F0FF' : 'dashed #3f3f46'}`,
-                  borderRadius: 6, padding: file1 ? 6 : 10,
-                  background: isDragOver1 ? 'rgba(0, 240, 255, 0.08)' : 'rgba(255,255,255,0.02)',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', minHeight: 96,
-                  textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
-                }}
-              >
-                {file1 ? (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                    {file1Preview ? (
-                      <img src={file1Preview} alt="T1 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
-                    ) : (
-                      <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle2 size={20} color="#00F0FF" />
-                        <span style={{ fontSize: 11, color: '#00F0FF', fontWeight: 600 }}>GeoTIFF Ready</span>
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-                        {file1.name}
-                      </span>
-                      <button
-                        onClick={handleClear1}
-                        title="Remove file"
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
-                    <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile1Select} style={{ display: 'none' }} />
-                    <FileUp size={20} color="#00F0FF" />
-                    <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>1. Primary Raster (T1)</span>
-                    <span style={{ fontSize: 9, color: '#71717a' }}>Drop or click to upload</span>
-                  </label>
-                )}
-              </div>
-
-              {/* Dropzone 2 (T2 / Observation) */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setIsDragOver2(true); }}
-                onDragLeave={() => setIsDragOver2(false)}
-                onDrop={handleDrop2}
-                style={{
-                  border: `1px ${file2 ? 'solid #38bdf8' : isDragOver2 ? 'dashed #38bdf8' : 'dashed #3f3f46'}`,
-                  borderRadius: 6, padding: file2 ? 6 : 10,
-                  background: isDragOver2 ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255,255,255,0.02)',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', minHeight: 96,
-                  textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
-                }}
-              >
-                {file2 ? (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                    {file2Preview ? (
-                      <img src={file2Preview} alt="T2 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
-                    ) : (
-                      <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle2 size={20} color="#38bdf8" />
-                        <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>GeoTIFF Ready</span>
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-                        {file2.name}
-                      </span>
-                      <button
-                        onClick={handleClear2}
-                        title="Remove file"
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
-                    <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile2Select} style={{ display: 'none' }} />
-                    <Plus size={20} color="#38bdf8" />
-                    <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>2. Observation Raster (T2)</span>
-                    <span style={{ fontSize: 9, color: '#71717a' }}>Optional for BiT-CD</span>
-                  </label>
-                )}
+                <button
+                  onClick={() => setActiveTab('upload')}
+                  style={{
+                    background: 'transparent', border: 'none', color: '#00F0FF',
+                    cursor: 'pointer', fontSize: 10, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
+                    display: 'flex', alignItems: 'center', gap: 4, padding: 0,
+                  }}
+                >
+                  <Plus size={11} />
+                  <span>Upload Custom Rasters</span>
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Live Model Intelligence & Routing Indicator */}
-            <div style={{
-              padding: '7px 10px', borderRadius: 5,
-              background: (file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.08)' : 'rgba(0,240,255,0.08)',
-              border: `1px solid ${(file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {(file2 || (!file1 && !single)) ? <Zap size={12} color="#22c55e" /> : <BrainCircuit size={12} color="#00F0FF" />}
-                <span style={{ color: (file2 || (!file1 && !single)) ? '#22c55e' : '#00F0FF', fontWeight: 700 }}>
-                  ROUTING: {(file2 || (!file1 && !single)) ? 'BIT-CD BITEMPORAL TRANSFORMER (94.7% ACC)' : 'GEOCHAT RS-VQA & GROUNDING'}
+          {/* ── View 2: Custom Multi-Modal Ingestion Dropzone ── */}
+          {activeTab === 'upload' && (
+            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {uploadFeedback && (
+                <div style={{
+                  padding: '6px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', fontSize: 11,
+                }}>
+                  {uploadFeedback}
+                </div>
+              )}
+
+              {/* Dual Ingestion Dropzones */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {/* Dropzone 1 (T1 / Primary) */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver1(true); }}
+                  onDragLeave={() => setIsDragOver1(false)}
+                  onDrop={handleDrop1}
+                  style={{
+                    border: `1px ${file1 ? 'solid #00F0FF' : isDragOver1 ? 'dashed #00F0FF' : 'dashed #3f3f46'}`,
+                    borderRadius: 6, padding: file1 ? 6 : 10,
+                    background: isDragOver1 ? 'rgba(0, 240, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', minHeight: 96,
+                    textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
+                  }}
+                >
+                  {file1 ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                      {file1Preview ? (
+                        <img src={file1Preview} alt="T1 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
+                      ) : (
+                        <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle2 size={20} color="#00F0FF" />
+                          <span style={{ fontSize: 11, color: '#00F0FF', fontWeight: 600 }}>GeoTIFF Ready</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                          {file1.name}
+                        </span>
+                        <button
+                          onClick={handleClear1}
+                          title="Remove file"
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
+                      <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile1Select} style={{ display: 'none' }} />
+                      <FileUp size={20} color="#00F0FF" />
+                      <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>1. Primary Raster (T1)</span>
+                      <span style={{ fontSize: 9, color: '#71717a' }}>Drop or click to upload</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Dropzone 2 (T2 / Observation) */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver2(true); }}
+                  onDragLeave={() => setIsDragOver2(false)}
+                  onDrop={handleDrop2}
+                  style={{
+                    border: `1px ${file2 ? 'solid #38bdf8' : isDragOver2 ? 'dashed #38bdf8' : 'dashed #3f3f46'}`,
+                    borderRadius: 6, padding: file2 ? 6 : 10,
+                    background: isDragOver2 ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255,255,255,0.02)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', minHeight: 96,
+                    textAlign: 'center', position: 'relative', transition: 'all 0.15s ease',
+                  }}
+                >
+                  {file2 ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                      {file2Preview ? (
+                        <img src={file2Preview} alt="T2 Preview" style={{ width: '100%', height: 72, objectFit: 'contain', borderRadius: 4 }} />
+                      ) : (
+                        <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle2 size={20} color="#38bdf8" />
+                          <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>GeoTIFF Ready</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                          {file2.name}
+                        </span>
+                        <button
+                          onClick={handleClear2}
+                          title="Remove file"
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '1px 3px' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', width: '100%', height: '100%', justifyContent: 'center' }}>
+                      <input type="file" accept=".tif,.tiff,.geotiff,.png,.jpg,.jpeg" onChange={handleFile2Select} style={{ display: 'none' }} />
+                      <Plus size={20} color="#38bdf8" />
+                      <span style={{ fontSize: 11, color: '#fafafa', fontWeight: 700 }}>2. Observation Raster (T2)</span>
+                      <span style={{ fontSize: 9, color: '#71717a' }}>Optional for BiT-CD</span>
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Model Intelligence & Routing Indicator */}
+              <div style={{
+                padding: '7px 10px', borderRadius: 5,
+                background: (file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.08)' : 'rgba(0,240,255,0.08)',
+                border: `1px solid ${(file2 || (!file1 && !single)) ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {(file2 || (!file1 && !single)) ? <Zap size={12} color="#22c55e" /> : <BrainCircuit size={12} color="#00F0FF" />}
+                  <span style={{ color: (file2 || (!file1 && !single)) ? '#22c55e' : '#00F0FF', fontWeight: 700 }}>
+                    ROUTING: {(file2 || (!file1 && !single)) ? 'BIT-CD BITEMPORAL TRANSFORMER (94.7% ACC)' : 'GEOCHAT RS-VQA & GROUNDING'}
+                  </span>
+                </div>
+                <span style={{ color: '#a1a1aa' }}>
+                  {file2 ? '2 Uploads' : (file1 ? '1 Upload (VQA)' : (single ? '1 Active Scene' : '2 Active Scenes'))}
                 </span>
               </div>
-              <span style={{ color: '#a1a1aa' }}>
-                {file2 ? '2 Uploads' : (file1 ? '1 Upload (VQA)' : (single ? '1 Active Scene' : '2 Active Scenes'))}
-              </span>
-            </div>
 
-            {/* Ingest Action Button (when files selected) */}
-            {file1 && (
-              <button
-                onClick={handleExecuteUpload}
-                disabled={isSubmittingUpload}
-                style={{
-                  height: 36, borderRadius: 5,
-                  background: isSubmittingUpload ? '#27272a' : (file2 ? '#22c55e' : '#00F0FF'),
-                  border: 'none', color: '#09090b', fontSize: 11, fontWeight: 700,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  cursor: isSubmittingUpload ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  boxShadow: `0 0 16px ${file2 ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}`,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {isSubmittingUpload ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>INGESTING & RUNNING SPECIALIST MODEL...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>INGEST & DISPATCH TO {file2 ? 'BIT-CD MODEL' : 'GEOCHAT MODEL'}</span>
-                    <ArrowRight size={13} />
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+              {/* Ingest Action Button & Cancel */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setActiveTab('rasters')}
+                  style={{
+                    height: 36, padding: '0 12px', borderRadius: 5, background: 'transparent',
+                    border: '1px solid #27272a', color: '#a1a1aa', fontSize: 11,
+                    fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer',
+                  }}
+                >
+                  Back to Swath
+                </button>
+
+                <button
+                  onClick={handleExecuteUpload}
+                  disabled={!file1 || isSubmittingUpload}
+                  style={{
+                    flex: 1, height: 36, borderRadius: 5,
+                    background: (!file1 || isSubmittingUpload) ? '#27272a' : (file2 ? '#22c55e' : '#00F0FF'),
+                    border: 'none', color: (!file1 || isSubmittingUpload) ? '#71717a' : '#09090b',
+                    fontSize: 11, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                    cursor: (!file1 || isSubmittingUpload) ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    boxShadow: file1 ? `0 0 16px ${file2 ? 'rgba(34,197,94,0.3)' : 'rgba(0,240,255,0.3)'}` : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {isSubmittingUpload ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>INGESTING & RUNNING SPECIALIST MODEL...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>INGEST & DISPATCH TO {file2 ? 'BIT-CD MODEL' : 'GEOCHAT MODEL'}</span>
+                      <ArrowRight size={13} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Loading Indicator Card */}

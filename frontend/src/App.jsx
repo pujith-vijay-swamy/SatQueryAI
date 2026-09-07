@@ -244,6 +244,7 @@ export default function App() {
                 onExecute={run}
                 onClose={() => setIsChatOpen(false)}
                 onOpenModal={() => setIsBitemporalModalOpen(true)}
+                onCustomUploadSuccess={handleCustomUploadSuccess}
               />
             </ErrorBoundary>
           </div>
